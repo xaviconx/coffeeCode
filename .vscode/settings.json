@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "*.tpp": "cpp",
+        "*.tcc": "cpp",
+        "cmath": "cpp",
+        "deque": "cpp",
+        "string": "cpp",
+        "vector": "cpp",
+        "tuple": "cpp",
+        "functional": "cpp",
+        "memory": "cpp",
+        "fstream": "cpp",
+        "istream": "cpp",
+        "ostream": "cpp",
+        "type_traits": "cpp",
+        "typeinfo": "cpp"
+    }
+}
