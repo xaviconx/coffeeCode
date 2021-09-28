@@ -1,3 +1,9 @@
+//TODO:
+//Menú de 123 flow pressure rate 4 values Serial
+//Buscar hilos
+//LCD en núcleo secundario
+//
+
 #ifdef ESP32
 #include "HX711.h"
 #include "LiquidCrystal_I2C.h" //allows interfacing with LCD screens
@@ -116,6 +122,10 @@ Motor actuator = Motor(AIN1, AIN2, PWMA, offsetA, STBY, 32000, 10, 0);
 bool sendDataFlag = false;
 // switches
 int mode;
+//test mode
+bool testMode = true; //true for testing all the sensors before, false for just loop executing
+int testOption = 0;
+int pastTestOption = 1;
 
 // ==== function prototypes ====
 double  readCurrentPressure(int times = 5);
@@ -174,6 +184,7 @@ void setup() //setup routine, runs once when system turned on or reset
 
 void loop() //loop routine runs over and over again forever
 {
+if (!testMode){
     mode = digitalRead(modePin);
     static bool plungerPhase = false,
                 preInfusionPhase = false,
@@ -414,8 +425,29 @@ void loop() //loop routine runs over and over again forever
 // Serial.print("flow: ");
 // Serial.println(readCurrentFlow());
 // }
-
 }
+
+else{   //The test mode starts here:
+    if (testOption != pastTestOption){  //Prints one time by each test.
+        pastTestOption = testOption;
+        Serial.println("\t TEST-MODE ON");
+        Serial.println("Please select one of the following options :)");
+        Serial.println("\t 1. Flow test");
+        Serial.println("\t 2. Pressuere test");
+        Serial.println("\t 3. Motor test");
+        Serial.println("\t 4. LCD test");
+        Serial.println("\t 5. Exit test-mode");
+    }
+    int bytesRecived = readFromSerial();
+    if (bytesRecived > 0){
+        if (bytesRecived > 2){
+            Serial.println("Please send just one number");
+        }
+        
+    }
+}
+} //End of the loop
+
 
 // INterruption Function
 void IRAM_ATTR caliper(){
