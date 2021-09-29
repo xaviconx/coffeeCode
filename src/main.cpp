@@ -15,7 +15,8 @@
 #include <CircularBuffer.h>
 #include <PID_v1.h>
 #include <Wire.h>
-#include <TB6612_ESP32.h>
+// #include <TB6612_ESP32.h>
+#include <BTS7960_ESP32.h>
 #else
 #include <SparkFun_TB6612.h>
 #endif
@@ -32,11 +33,15 @@ double plungerArea = PI * pow((plungerDiameter/2.0),2);
 
 // ========== Pins configuration ==========
 #ifdef ESP32
-// motor Pins
-#define AIN1 26
-#define AIN2 25
-#define PWMA 14
-#define STBY 15
+// motor Pins using TB6612
+// #define AIN1 26
+// #define AIN2 25
+// #define PWMA 14
+// #define STBY 15
+//Motor pins using BTS7960
+#define PWMA 26
+#define PWMB 25
+
 // caliper pins
 #define caliperClkPin 19
 #define caliperDataPin 18
@@ -117,7 +122,8 @@ String commandRead;
 HX711 balanza;
 // actuator
 const int offsetA = 1;
-Motor actuator = Motor(AIN1, AIN2, PWMA, offsetA, STBY, 32000, 10, 0);
+// Motor actuator = Motor(AIN1, AIN2, PWMA, offsetA, STBY, 32000, 10, 0);
+MotorBTS actuator = MotorBTS(PWMA, PWMB, offsetA, 32000, 10, 0, 1);
 // serial information for UI
 bool sendDataFlag = false;
 // switches
@@ -139,6 +145,7 @@ void    printLCD();
 void    setPWMPrescaler(uint8_t pin, uint16_t prescale);
 double  readCurrentFlow();
 int     readFromSerial();
+void    testing();
 
 void IRAM_ATTR caliper();
 void IRAM_ATTR process_data(bool data[], double time);
@@ -147,6 +154,7 @@ void setup() //setup routine, runs once when system turned on or reset
 {
     Serial.begin(baudRate); //initializes serial communication at set baud rate bits per second
     Serial.println("ON");
+    testing();
 #ifdef LCDAVAILABLE
     lcd.init(); //initializes the LCD screen
     lcd.backlight();
@@ -184,7 +192,6 @@ void setup() //setup routine, runs once when system turned on or reset
 
 void loop() //loop routine runs over and over again forever
 {
-if (!testMode){
     mode = digitalRead(modePin);
     static bool plungerPhase = false,
                 preInfusionPhase = false,
@@ -425,27 +432,7 @@ if (!testMode){
 // Serial.print("flow: ");
 // Serial.println(readCurrentFlow());
 // }
-}
 
-else{   //The test mode starts here:
-    if (testOption != pastTestOption){  //Prints one time by each test.
-        pastTestOption = testOption;
-        Serial.println("\t TEST-MODE ON");
-        Serial.println("Please select one of the following options :)");
-        Serial.println("\t 1. Flow test");
-        Serial.println("\t 2. Pressuere test");
-        Serial.println("\t 3. Motor test");
-        Serial.println("\t 4. LCD test");
-        Serial.println("\t 5. Exit test-mode");
-    }
-    int bytesRecived = readFromSerial();
-    if (bytesRecived > 0){
-        if (bytesRecived > 2){
-            Serial.println("Please send just one number");
-        }
-        
-    }
-}
 } //End of the loop
 
 
@@ -533,8 +520,8 @@ void updateFlow(double desireFlow){
 }
 
 void printLCD(){
-    static unsigned long t = millis();
-    bool direction = digitalRead(directionPin);
+    // static unsigned long t = millis();
+    // bool direction = digitalRead(directionPin);
     
 #ifdef LCDAVAILABLE
     if (mode == AUTOMATIC){
@@ -726,4 +713,30 @@ int readFromSerial()
     }
 
     return 0;
+}
+
+void testing(){
+    actuator.drive(1024);
+    delay(1000);
+    actuator.drive(-1024);
+    delay(1000);
+
+    //The test mode starts here:
+    // if (testOption != pastTestOption){  //Prints one time by each test.
+    //     pastTestOption = testOption;
+    //     Serial.println("\t TEST-MODE ON");
+    //     Serial.println("Please select one of the following options :)");
+    //     Serial.println("\t 1. Flow test");
+    //     Serial.println("\t 2. Pressuere test");
+    //     Serial.println("\t 3. Motor test");
+    //     Serial.println("\t 4. LCD test");
+    //     Serial.println("\t 5. Exit test-mode");
+    // }
+    // int bytesRecived = readFromSerial();
+    // if (bytesRecived > 0){
+    //     if (bytesRecived > 2){
+    //         Serial.println("Please send just one number");
+    //     }
+
+    // }
 }
