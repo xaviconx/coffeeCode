@@ -130,8 +130,11 @@ bool sendDataFlag = false;
 int mode;
 //test mode
 bool testMode = true; //true for testing all the sensors before, false for just loop executing
-int testOption = 0;
-int pastTestOption = 1;
+char testOption = '0';
+char pastTestOption = '1';
+int  printDelay = 500;
+int  motorDelay = 1000;
+
 
 // ==== function prototypes ====
 double  readCurrentPressure(int times = 5);
@@ -154,7 +157,9 @@ void setup() //setup routine, runs once when system turned on or reset
 {
     Serial.begin(baudRate); //initializes serial communication at set baud rate bits per second
     Serial.println("ON");
+
     testing();
+
 #ifdef LCDAVAILABLE
     lcd.init(); //initializes the LCD screen
     lcd.backlight();
@@ -187,8 +192,9 @@ void setup() //setup routine, runs once when system turned on or reset
     pidActuator.SetSampleTime(1); // refresh rate of PID controller
     pidActuator.SetOutputLimits(30, PWMDefault);
 
-
+    
 }
+//end of setup
 
 void loop() //loop routine runs over and over again forever
 {
@@ -520,8 +526,8 @@ void updateFlow(double desireFlow){
 }
 
 void printLCD(){
-    // static unsigned long t = millis();
-    // bool direction = digitalRead(directionPin);
+    static unsigned long t = millis();
+    bool direction = digitalRead(directionPin);
     
 #ifdef LCDAVAILABLE
     if (mode == AUTOMATIC){
@@ -715,28 +721,93 @@ int readFromSerial()
     return 0;
 }
 
-void testing(){
-    actuator.drive(1024);
-    delay(1000);
-    actuator.drive(-1024);
-    delay(1000);
+void testing()
+{
+    while (testMode)
+    {
+        //The test mode starts here:
+        if (testOption != pastTestOption)
+        { //Prints one time by each test.
+            pastTestOption = testOption;
+            Serial.println("\t TEST-MODE ON");
+            Serial.println("Please select one of the following options");
+            Serial.println("\t 1. Flow test");
+            Serial.println("\t 2. Pressuere test");
+            Serial.println("\t 3. Motor test");
+            Serial.println("\t 4. LCD test");
+            Serial.println("\t 5. Exit test-mode");
+        }
+        int bytesRecived = readFromSerial();
 
-    //The test mode starts here:
-    // if (testOption != pastTestOption){  //Prints one time by each test.
-    //     pastTestOption = testOption;
-    //     Serial.println("\t TEST-MODE ON");
-    //     Serial.println("Please select one of the following options :)");
-    //     Serial.println("\t 1. Flow test");
-    //     Serial.println("\t 2. Pressuere test");
-    //     Serial.println("\t 3. Motor test");
-    //     Serial.println("\t 4. LCD test");
-    //     Serial.println("\t 5. Exit test-mode");
-    // }
-    // int bytesRecived = readFromSerial();
-    // if (bytesRecived > 0){
-    //     if (bytesRecived > 2){
-    //         Serial.println("Please send just one number");
-    //     }
+        if (bytesRecived > 0)
+        {
+            char selection[4];
+            String serialCommandaux = commands.shift();
+            serialCommandaux.toCharArray(selection, 4);
+            testOption = selection[0];
 
-    // }
+            if (serialCommandaux.length() > 1)
+            {
+                Serial.println("Please send just one number");
+            }
+
+            switch (testOption)
+            {
+            case '1': //Prints the value of the sensor until you send something over serial.
+                Serial.println("Flow test selected. Send any data over serial to stop.");
+                do
+                {
+                    Serial.print("Current flow: ");
+                    Serial.println(readCurrentFlow());
+                    delay(printDelay);
+                    bytesRecived = readFromSerial();
+                } while (bytesRecived == 0);
+                commands.clear();
+
+                break;
+
+            case '2': //Prints the value of the sensor until you send something over serial.
+                Serial.println("Pressure test selected. Send any data over serial to stop.");
+                do
+                {
+                    Serial.print("Current pressure: ");
+                    Serial.println(readCurrentPressure());
+                    delay(printDelay);
+                    bytesRecived = readFromSerial();
+                } while (bytesRecived == 0);
+                commands.clear();
+                break;
+
+            case '3': //Moves the motor back and forward at max pwm
+                Serial.println("Motor test selected.");
+                Serial.println("Motor moving fwd @1024 PWM...");
+                actuator.drive(1024);
+                delay(motorDelay);
+
+                Serial.print("Motor moving rwd @1024 PWM...");
+                actuator.drive(-1024);
+                delay(motorDelay);
+
+                Serial.println("Motor stopped");
+                actuator.brake();
+                delay(500);
+
+                commands.clear();
+                break;
+
+            case '4': //Prints a test message on the LCD
+                Serial.println("Printing on LCD...");
+                #ifdef LCDAVAILABLE
+                    lcd.setCursor(0, 0);
+                    lcd.print("LCD IS OK");
+                #endif
+                break;
+            case '5':
+                Serial.println("Testing done, initializing full program");
+                delay(1000);
+                testMode = false;
+                break;
+            }
+        }
+    }
 }
